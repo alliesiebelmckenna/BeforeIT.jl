@@ -1,0 +1,9 @@
+base_vec_tau_INC:    [0.12, 0.15, 0.25, 0.30, 0.40]
+variant_vec_tau_INC:    [0.12, 0.20, 0.25, 0.30, 0.40]
+base_vec_thr_lo_INC: [0.0, 3.0, 4.5, 6.0, 8.0]
+variant_vec_thr_lo_INC: [0.0, 3.0, 4.5, 6.0, 8.0]
+T:  16
+n_sims: 2
+# for tax shock in v2_pit_rate_scenario:
+shk_brkt: 3
+shk_amt: 0.05
