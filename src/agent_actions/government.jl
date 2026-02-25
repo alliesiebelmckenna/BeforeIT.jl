@@ -53,7 +53,23 @@ function gov_revenues(model::AbstractModel)
 
     # compute government revenues
     social_security = (tau_SIF + tau_SIW) * tot_wages_emp * P_bar_HH
-    labour_income = tau_INC * (1 - tau_SIW) * P_bar_HH * tot_wages_emp
+    
+    vec_inc_tax_pybl = zeros(length(w_act))
+
+    for i in 1:length(w_act)
+        if w_act.O_h[i] == 0
+            continue
+        else
+            inc_i = w_act.w_h[i]
+            vec_inc_tax_pybl[i] = income_tax_payable(
+                inc_i, vec_tau_INC, vec_thr_lo_INC, tau_SIW
+            )
+        end
+    end
+
+    labour_income = sum(vec_inc_tax_pybl)
+    # Old specification:
+    #labour_income = tau_INC * (1 - tau_SIW) * P_bar_HH * tot_wages_emp
     value_added = tau_VAT * tot_C_h
     capital_income = tau_INC * (1 - tau_FIRM) * theta_DIV * (sum(pos.(firms.Pi_i)) + pos(bank.Pi_k))
     corporate_income = tau_FIRM * (sum(pos.(firms.Pi_i)) + pos(bank.Pi_k))
