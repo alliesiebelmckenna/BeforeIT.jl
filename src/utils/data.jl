@@ -30,6 +30,7 @@ Bit.@object struct Data(Object) <: AbstractData
     euribor::Vector{Bit.typeFloat} = Bit.typeFloat[]
     nominal_sector_gva::Vector{Vector{Bit.typeFloat}} = Vector{Bit.typeFloat}[]
     real_sector_gva::Vector{Vector{Bit.typeFloat}} = Vector{Bit.typeFloat}[]
+    gov_revenue::Vector{Bit.typeFloat} = Bit.typeFloat[]
 end
 
 # Define the DataVector struct
@@ -145,6 +146,7 @@ function update_data_init!(m::AbstractModel)
     d.gdp_deflator_growth_ea[1] = m.rotw.pi_EA
     d.real_gdp_ea[1] = m.rotw.Y_EA
     d.collection_time[1] = 1
+    d.gov_revenue[1] = g.Y_G
     return m
 end
 
@@ -219,5 +221,6 @@ function update_data_step!(m::AbstractModel)
     d.gdp_deflator_growth_ea[t] = m.rotw.pi_EA
     d.real_gdp_ea[t] = m.rotw.Y_EA
     d.collection_time[t] = m.agg.t
+    d.gov_revenue[t] = g.Y_G
     return m
 end
