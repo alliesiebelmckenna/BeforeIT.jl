@@ -96,7 +96,8 @@ function allocate_new_data!(m::AbstractModel)
         push!(getfield(d, f), 0.0)
     end
     push!(d.nominal_sector_gva, zeros(m.prop.G))
-    return push!(d.real_sector_gva, zeros(m.prop.G))
+    push!(d.real_sector_gva, zeros(m.prop.G))
+    return push!(d.gov_revenue, 0.0)
 end
 
 function update_data_init!(m::AbstractModel)
@@ -146,12 +147,11 @@ function update_data_init!(m::AbstractModel)
     d.gdp_deflator_growth_ea[1] = m.rotw.pi_EA
     d.real_gdp_ea[1] = m.rotw.Y_EA
     d.collection_time[1] = 1
-    d.gov_revenue[1] = g.Y_G
     return m
 end
 
 function update_data_step!(m::AbstractModel)
-    d, p, t = m.data, m.prop, length(m.data.collection_time)
+    d, p, t, g = m.data, m.prop, length(m.data.collection_time), m.gov
     tot_C_h = sum(m.w_act.C_h) + sum(m.w_inact.C_h) + sum(m.firms.C_h) + m.bank.C_h
     tot_I_h = sum(m.w_act.I_h) + sum(m.w_inact.I_h) + sum(m.firms.I_h) + m.bank.I_h
 
@@ -221,6 +221,6 @@ function update_data_step!(m::AbstractModel)
     d.gdp_deflator_growth_ea[t] = m.rotw.pi_EA
     d.real_gdp_ea[t] = m.rotw.Y_EA
     d.collection_time[t] = m.agg.t
-    d.gov_revenue[t] = g.Y_G
+    d.gov_revenue[t] = m.gov.Y_G
     return m
 end
