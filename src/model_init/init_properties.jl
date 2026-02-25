@@ -39,11 +39,6 @@ Bit.@object mutable struct Properties(Object) <: AbstractProperties
     sb_other::Bit.typeFloat
     E_k::Bit.typeFloat
     r_bar::Bit.typeFloat
-    # New personal income tax parameters
-    vec_tau_PIT::Vector{Bit.typeFloat}
-    vec_thr_lo_PIT::Vector{Bit.typeFloat}
-    vec_thr_up_PIT::Vector{Bit.typeFloat}
-    vec_addition_PIT::Vector{Bit.typeFloat}
 end
 
 function Properties(parameters::Dict{String, Any}, initial_conditions)
@@ -98,16 +93,9 @@ function Properties(parameters::Dict{String, Any}, initial_conditions)
     E_k = typeFloat(initial_conditions["E_k"])
     r_bar = typeFloat(initial_conditions["r_bar"])
 
-    # personal income tax related parameters
-    vec_tau_PIT = typeFloat(parameters["vec_tau_PIT"])
-    vec_thr_lo_PIT = typeFloat(parameters["vec_thr_lo_PIT"])
-    vec_thr_up_PIT = typeFloat(parameters["vec_thr_up_PIT"])
-    vec_addition_PIT = typeFloat(parameters["vec_addition_PIT"])
-
     return Properties(
         G, T_prime, H_act, H_inact, J, L, I_s, I, H, tau_INC, tau_FIRM, tau_VAT, tau_SIF,
         tau_SIW, tau_EXPORT, tau_CF, tau_G, theta_UB, psi, psi_H, mu, theta_DIV, theta, zeta, zeta_LTV,
-        zeta_b, b_CF_g, b_CFH_g, b_HH_g, c_G_g, c_E_g, c_I_g, a_sg, C, D_H, K_H, sb_other, E_k, r_bar,
-        vec_tau_PIT, vec_thr_lo_PIT, vec_thr_up_PIT, vec_addition_PIT
+        zeta_b, b_CF_g, b_CFH_g, b_HH_g, c_G_g, c_E_g, c_I_g, a_sg, C, D_H, K_H, sb_other, E_k, r_bar
     )
 end

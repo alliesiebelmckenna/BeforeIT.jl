@@ -1,28 +1,27 @@
 """
-    gov_expenditure(model)
+    gov_expenditure(gov::AbstractGovernment, model)
 
 Computes government expenditure on consumption and transfers to households.
+
+# Arguments
+- `gov`: government object
+- `model`: model object
 
 # Returns
 - `C_G`: government consumption
 - `C_d_j`: local government consumptions
 """
-function gov_expenditure(model)
-    gov = model.gov
-
-    c_G_g, P_bar_g, pi_e = model.prop.c_G_g, model.agg.P_bar_g, model.agg.pi_e
+function gov_expenditure(gov, model)
+    # unpack non-government arguments
+    c_G_g = model.prop.c_G_g
+    P_bar_g = model.agg.P_bar_g
+    pi_e = model.agg.pi_e
 
     epsilon_G = randn() * gov.sigma_G
     C_G = exp(gov.alpha_G * log(gov.C_G) + gov.beta_G + epsilon_G)
-    J = length(gov.C_d_j)
+    J = size(gov.C_d_j, 1)
     C_d_j = C_G ./ J .* ones(J) .* sum(c_G_g .* P_bar_g) .* (1 + pi_e)
-
     return C_G, C_d_j
-end
-function set_gov_expenditure!(model)
-    C_G, C_d_j = gov_expenditure(model)
-    model.gov.C_G = C_G
-    return model.gov.C_d_j .= C_d_j
 end
 
 """ 
@@ -35,14 +34,19 @@ workers and firms. The government also collects taxes on consumption and
 capital formation. Finally, the government collects taxes on exports and
 imports.
 
+# Arguments
+- `model`: model object
+
 # Returns
 - `Y_G`: government revenues
 """
 function gov_revenues(model::AbstractModel)
-    gov, w_act, w_inact = model.gov, model.w_act, model.w_inact
-    firms, bank, rotw = model.firms, model.bank, model.rotw
+    # unpack objects
+    w_act, w_inact, firms, bank, rotw = model.w_act, model.w_inact, model.firms, model.bank, model.rotw
+    prop = model.prop
+    P_bar_HH = model.agg.P_bar_HH
 
-    prop, P_bar_HH = model.prop, model.agg.P_bar_HH
+    # unpack parameters
     tau_SIF, tau_SIW, tau_INC, tau_CF, tau_VAT = prop.tau_SIF, prop.tau_SIW, prop.tau_INC, prop.tau_CF, prop.tau_VAT
     tau_FIRM, tau_EXPORT, theta_DIV = prop.tau_FIRM, prop.tau_EXPORT, prop.theta_DIV
 
@@ -53,23 +57,7 @@ function gov_revenues(model::AbstractModel)
 
     # compute government revenues
     social_security = (tau_SIF + tau_SIW) * tot_wages_emp * P_bar_HH
-    
-    vec_inc_tax_pybl = zeros(length(w_act))
-
-    for i in 1:length(w_act)
-        if w_act.O_h[i] == 0
-            continue
-        else
-            inc_i = w_act.w_h[i]
-            vec_inc_tax_pybl[i] = income_tax_payable(
-                inc_i, vec_tau_INC, vec_thr_lo_INC, tau_SIW
-            )
-        end
-    end
-
-    labour_income = sum(vec_inc_tax_pybl)
-    # Old specification:
-    #labour_income = tau_INC * (1 - tau_SIW) * P_bar_HH * tot_wages_emp
+    labour_income = tau_INC * (1 - tau_SIW) * P_bar_HH * tot_wages_emp
     value_added = tau_VAT * tot_C_h
     capital_income = tau_INC * (1 - tau_FIRM) * theta_DIV * (sum(pos.(firms.Pi_i)) + pos(bank.Pi_k))
     corporate_income = tau_FIRM * (sum(pos.(firms.Pi_i)) + pos(bank.Pi_k))
@@ -91,22 +79,29 @@ function gov_revenues(model::AbstractModel)
 
     return Y_G
 end
-function set_gov_revenues!(model::AbstractModel)
-    return model.gov.Y_G = gov_revenues(model)
-end
 
 """
-    gov_loans(model)
+    gov_loans(gov::AbstractGovernment, model, Y_G)
 
 Computes government new government debt.
+
+# Arguments
+- `gov::AbstractGovernment`: government object
+- `model`: model object
 
 # Returns
 - `L_G`: new government debt
 """
-function gov_loans(model)
-    gov = model.gov
-    r_G, P_bar_HH, H, H_inact = model.cb.r_G, model.agg.P_bar_HH, model.prop.H, model.prop.H_inact
-    theta_UB, w_h, O_h = model.prop.theta_UB, model.w_act.w_h, model.w_act.O_h
+function gov_loans(gov, model)
+    # unpack non-government arguments
+    r_G = model.cb.r_G
+    P_bar_HH = model.agg.P_bar_HH
+    H = model.prop.H
+    H_inact = model.prop.H_inact
+    theta_UB = model.prop.theta_UB
+
+    w_h = model.w_act.w_h
+    O_h = model.w_act.O_h
 
     tot_wages_unemp = sum(w_h[O_h .== 0])
     social_benefits =
@@ -119,29 +114,25 @@ function gov_loans(model)
 
     return L_G
 end
-function set_gov_loans!(model)
-    return model.gov.L_G = gov_loans(model)
-end
 
 """
-    gov_social_benefits(model)
+    gov_social_benefits(gov::AbstractGovernment, model)
 
 Computes social benefits paid by the government households.
+
+# Arguments
+- `gov`: government object
+- `model`: model object
 
 # Returns
 - `sb_other`: social benefits for other households
 - `sb_inact`: social benefits for inactive households
 """
-function gov_social_benefits(model::AbstractModel)
-    gov = model.gov
+function gov_social_benefits(gov::AbstractGovernment, model)
     gamma_e = model.agg.gamma_e
 
     sb_other = gov.sb_other * (1 + gamma_e)
     sb_inact = gov.sb_inact * (1 + gamma_e)
 
     return sb_other, sb_inact
-end
-function set_gov_social_benefits!(model::AbstractModel)
-    gov = model.gov
-    return gov.sb_other, gov.sb_inact = gov_social_benefits(model)
 end
