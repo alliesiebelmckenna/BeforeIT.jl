@@ -9,7 +9,6 @@ using Preferences
 using Random
 using StatsBase
 using WeightVectors
-using YAML
 
 const Bit = BeforeIT
 
