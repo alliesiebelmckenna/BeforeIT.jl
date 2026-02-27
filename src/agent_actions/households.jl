@@ -11,17 +11,24 @@ function update_workers_wages!(model::AbstractModel)
 end
 
 function households_income_act(model; expected = false)
-    w_act = model.w_act
+    w_act, prop = model.w_act, model.prop
 
     w_h, O_h, tau_SIW, tau_INC = w_act.w_h, w_act.O_h, model.prop.tau_SIW, model.prop.tau_INC
     theta_UB, sb_other, P_bar_HH = model.prop.theta_UB, model.gov.sb_other, model.agg.P_bar_HH
+
+    # new personal income tax parameters
+    vec_tau_PIT, vec_thr_lo_PIT, vec_thr_up_PIT, vec_addition_PIT = prop.vec_tau_PIT, prop.vec_thr_lo_PIT, prop.vec_thr_up_PIT, prop.vec_addition_PIT
 
     pi_e = expected ? model.agg.pi_e : zero(typeFloat)
 
     Y_h = zeros(typeFloat, length(w_h))
     for h in eachindex(w_h)
         if O_h[h] != 0
-            Y_h[h] = (w_h[h] * (1 - tau_SIW - tau_INC * (1 - tau_SIW)) + sb_other) * P_bar_HH * (1 + pi_e)
+            # new Y_h with personal income tax functionality
+            inc_tax_pybl_h = income_tax_payable(w_h[h], vec_tau_PIT, vec_thr_lo_PIT, tau_SIW)
+            Y_h[h] = (w_h[h] * (1 - tau_SIW) - inc_tax_pybl_h + sb_other) * P_bar_HH * (1 + pi_e)
+            # old Y_h:
+            # Y_h[h] = (w_h[h] * (1 - tau_SIW - tau_INC * (1 - tau_SIW)) + sb_other) * P_bar_HH * (1 + pi_e)
         else
             Y_h[h] = (theta_UB * w_h[h] + sb_other) * P_bar_HH * (1 + pi_e)
         end
