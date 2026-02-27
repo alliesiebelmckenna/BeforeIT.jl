@@ -1,5 +1,5 @@
 """
-    income_tax_payable(inc, vec_tau, vec_thr_lo, tau_SIW)
+    income_tax_payable_act (inc, vec_tau, vec_thr_lo, tau_SIW)
 
 Computes a person's income tax payable given a vector of tax rates, a vector of (lower) income thresholds, and an effective employee social contribution rate.
 
@@ -10,24 +10,46 @@ Computes a person's income tax payable given a vector of tax rates, a vector of 
 ## Personal income tax (PIT) functions
 function income_tax_payable(inc, vec_tau, vec_thr_lo, tau_SIW)
     
-    vec_thr_hi = upper_thresholds(vec_thr_lo)
-    vec_addition = addition(vec_tau, vec_thr_lo)
+    if inc == 0
+        inc_tax_pybl = 0
+    else
+        vec_thr_hi = upper_thresholds(vec_thr_lo)
+        vec_addition = addition(vec_tau, vec_thr_lo)
 
-    txbl_income = inc * (1 - tau_SIW)
+        txbl_income = inc * (1 - tau_SIW)
 
-    # Determine PIT bracket
-    a = txbl_income .> vec_thr_lo
-    b = txbl_income .<= vec_thr_hi
-    i = findall(a .& b)
+        # Determine PIT bracket
+        a = txbl_income .> vec_thr_lo
+        b = txbl_income .<= vec_thr_hi
+        i = findall(a .& b)
 
-    # Pull elements from each vector
-    thr_lo = only(vec_thr_lo[i])
-    rate = only(vec_tau[i])
-    add = only(vec_addition[i])
+        # Pull elements from each vector
+        thr_lo = only(vec_thr_lo[i])
+        rate = only(vec_tau[i])
+        add = only(vec_addition[i])
 
-    inc_tax_pybl = rate * (txbl_income - thr_lo) + add
-
+        inc_tax_pybl = rate * (txbl_income - thr_lo) + add
+    end
     return inc_tax_pybl
+end
+
+"""
+    income_tax_payable_firms (inc, vec_tau, vec_thr_lo, tau_SIW)
+
+Computes a person's income tax payable for an active household given a vector of tax rates, a vector of (lower) income thresholds, and an effective employee social contribution rate.
+
+# Returns
+- `inc_tax_pybl`: Personal income tax payable (\$)
+"""
+
+## Personal income tax (PIT) functions
+function income_tax_payable_firms(theta_DIV, tau_FIRM, profit, vec_tau, vec_thr_lo)
+    
+    dividends = theta_DIV * (1 - tau_FIRM) * max(0, profit)
+
+    inc_tax_pybl_firms = income_tax_payable(dividends, vec_tau, vec_thr_lo, 0)
+
+    return inc_tax_pybl_firms
 end
 
 """
