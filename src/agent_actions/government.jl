@@ -44,6 +44,8 @@ function gov_revenues(model::AbstractModel)
 
     prop, P_bar_HH = model.prop, model.agg.P_bar_HH
     tau_SIF, tau_SIW, tau_INC, tau_CF, tau_VAT = prop.tau_SIF, prop.tau_SIW, prop.tau_INC, prop.tau_CF, prop.tau_VAT
+    # new personal income tax parameters
+    vec_tau_PIT, vec_thr_lo_PIT, vec_thr_up_PIT, vec_addition_PIT = prop.vec_tau_PIT, prop.vec_thr_lo_PIT, prop.vec_thr_up_PIT, prop.vec_addition_PIT    
     tau_FIRM, tau_EXPORT, theta_DIV = prop.tau_FIRM, prop.tau_EXPORT, prop.theta_DIV
 
     # compute total wages, consumption and investment
@@ -53,7 +55,24 @@ function gov_revenues(model::AbstractModel)
 
     # compute government revenues
     social_security = (tau_SIF + tau_SIW) * tot_wages_emp * P_bar_HH
-    labour_income = tau_INC * (1 - tau_SIW) * P_bar_HH * tot_wages_emp
+    
+    # New personal income tax specification:
+    vec_inc_tax_pybl = zeros(length(w_act))
+
+    for i in 1:length(w_act)
+        if w_act.O_h[i] == 0
+            continue
+        else
+            inc_i = w_act.w_h[i]
+            vec_inc_tax_pybl[i] = income_tax_payable(
+                inc_i, vec_tau_PIT, vec_thr_lo_PIT, tau_SIW
+            )
+        end
+    end
+
+    labour_income = sum(vec_inc_tax_pybl)
+    # Old personal income tax specification:
+    old_labour_income = tau_INC * (1 - tau_SIW) * P_bar_HH * tot_wages_emp
     value_added = tau_VAT * tot_C_h
     capital_income = tau_INC * (1 - tau_FIRM) * theta_DIV * (sum(pos.(firms.Pi_i)) + pos(bank.Pi_k))
     corporate_income = tau_FIRM * (sum(pos.(firms.Pi_i)) + pos(bank.Pi_k))

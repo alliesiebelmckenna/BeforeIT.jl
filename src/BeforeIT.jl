@@ -27,6 +27,9 @@ macro maybe_threads(cond, loop)
     )
 end
 
+# personal income tax functions
+include("utils/pit_functions.jl")
+
 # definition of agents
 include("model_init/agents.jl")
 
