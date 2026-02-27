@@ -58,17 +58,34 @@ function set_households_income_inact!(model; expected = false)
 end
 
 function households_income_firms(model::AbstractModel; expected = false)
-    firms = model.firms
+    firms, prop = model.firms, model.prop
     tau_INC, tau_FIRM, theta_DIV = model.prop.tau_INC, model.prop.tau_FIRM, model.prop.theta_DIV
     sb_other, P_bar_HH = model.gov.sb_other, model.agg.P_bar_HH
+    # new personal income tax parameters
+    vec_tau_PIT, vec_thr_lo_PIT, vec_thr_up_PIT, vec_addition_PIT = prop.vec_tau_PIT, prop.vec_thr_lo_PIT, prop.vec_thr_up_PIT, prop.vec_addition_PIT
+
 
     Pi_i = expected ? firms.Pi_e_i : firms.Pi_i
     pi_e = expected ? model.agg.pi_e : zero(typeFloat)
 
     Y_h = zeros(typeFloat, length(Pi_i))
+    
+    inc_tax_pybl_firms = zeros(typeFloat, length(Pi_i))
+
+    # Calculate personal income tax for each firm owner i
     for i in eachindex(Pi_i)
-        Y_h[i] = theta_DIV * (1 - tau_INC) * (1 - tau_FIRM) * max(0, Pi_i[i]) + sb_other * P_bar_HH * (1 + pi_e)
+        inc_tax_pybl_firms[i] = income_tax_payable_firms(theta_DIV, tau_FIRM, Pi_i[i], vec_tau_PIT, vec_thr_lo_PIT)
     end
+
+    # Calculate net disposable income for each firm owner i
+    for i in eachindex(Pi_i)
+        Y_h[i] = theta_DIV * (1 - tau_FIRM) * max(0, Pi_i[i]) - inc_tax_pybl_firms[i] + sb_other * P_bar_HH * (1 + pi_e)
+    end
+    
+    # # Old Y_h:
+    # for i in eachindex(Pi_i)
+    #     Y_h[i] = theta_DIV * (1 - tau_INC) * (1 - tau_FIRM) * max(0, Pi_i[i]) + sb_other * P_bar_HH * (1 + pi_e)
+    # end
     return Y_h
 end
 function set_households_income_firms!(model; expected = false)
