@@ -93,15 +93,36 @@ function set_households_income_firms!(model; expected = false)
 end
 
 function households_income_bank(model; expected = false)
-    bank = model.bank
+    bank, prop = model.bank, model.prop
 
     tau_INC, tau_FIRM, theta_DIV = model.prop.tau_INC, model.prop.tau_FIRM, model.prop.theta_DIV
     sb_other, P_bar_HH = model.gov.sb_other, model.agg.P_bar_HH
 
+    # new personal income tax parameters
+    vec_tau_PIT, vec_thr_lo_PIT, vec_thr_up_PIT, vec_addition_PIT = prop.vec_tau_PIT, prop.vec_thr_lo_PIT, prop.vec_thr_up_PIT, prop.vec_addition_PIT
+
     Pi_k = expected ? bank.Pi_e_k : bank.Pi_k
     pi_e = expected ? model.agg.pi_e : zero(typeFloat)
 
-    Y_h = theta_DIV * (1 - tau_INC) * (1 - tau_FIRM) * max(0, Pi_k) + sb_other * P_bar_HH * (1 + pi_e)
+    Y_h = zeros(typeFloat, length(Pi_k))
+
+    inc_tax_pybl_bank = zeros(typeFloat, length(Pi_k))
+
+    # Calculate personal income tax for bank owner k
+    for k in eachindex(Pi_k)
+        inc_tax_pybl_bank[k] = income_tax_payable_firms(theta_DIV, tau_FIRM, Pi_k[k], vec_tau_PIT, vec_thr_lo_PIT)
+    end
+
+    # Calculate net disposable income for bank owner k
+    for k in eachindex(Pi_k)
+        Y_h[k] = theta_DIV * (1 - tau_FIRM) * max(0, Pi_k[k]) - inc_tax_pybl_bank[k] + sb_other * P_bar_HH * (1 + pi_e)
+    end
+
+    # household income/budget/deposit functions below for bank owner assume a single bank
+    # TODO: modify those functions to allow for more than one bank (low priority)
+    Y_h = only(Y_h)
+    # # Old Y_h:
+    # Y_h = theta_DIV * (1 - tau_INC) * (1 - tau_FIRM) * max(0, Pi_k) + sb_other * P_bar_HH * (1 + pi_e)
     return Y_h
 end
 function set_households_income_bank!(model; expected = false)
