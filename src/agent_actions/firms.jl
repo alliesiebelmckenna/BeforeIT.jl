@@ -28,9 +28,22 @@ end
 function expected_deposits_capital_loans(firms::AbstractFirms, model::AbstractModel, Pi_e_i)
     tau_FIRM, theta, theta_DIV = model.prop.tau_FIRM, model.prop.theta, model.prop.theta_DIV
     P_bar_CF, pi_e = model.agg.P_bar_CF, model.agg.pi_e
+    # corporate income tax parameters
+    vec_tau_FIRM, thr_FIRM = model.prop.vec_tau_FIRM, model.prop.thr_FIRM
+
+    corp_tax_pybl = zeros(typeFloat, length(Pi_e_i))
+
+    # Calculate corporate income tax for firm i
+    for i in eachindex(Pi_e_i)
+        corp_tax_pybl[i] = corporate_income_tax_payable(Pi_e_i[i], vec_tau_FIRM, thr_FIRM)
+    end
 
     # expected deposits
-    DD_e_i = Pi_e_i .- theta .* firms.L_i .- tau_FIRM .* max.(0, Pi_e_i) .- (theta_DIV .* (1 .- tau_FIRM)) .* max.(0, Pi_e_i)
+    # new DD_e_i
+    DD_e_i = Pi_e_i .- theta .* firms.L_i .- corp_tax_pybl .- theta_DIV .* (Pi_e_i .- corp_tax_pybl)
+    
+    # # Old DD_e_i
+    # DD_e_i = Pi_e_i .- theta .* firms.L_i .- tau_FIRM .* max.(0, Pi_e_i) .- (theta_DIV .* (1 .- tau_FIRM)) .* max.(0, Pi_e_i)
 
     # expected capital
     K_e_i = P_bar_CF .* (1 + pi_e) .* firms.K_i
@@ -268,13 +281,30 @@ function firms_deposits(model)
     tau_FIRM, tau_SIF, theta_DIV = model.prop.tau_FIRM, model.prop.tau_SIF, model.prop.theta_DIV
     theta, r, r_bar, P_bar_HH = model.prop.theta, model.bank.r, model.cb.r_bar, model.agg.P_bar_HH
 
+    # corporate income tax parameters
+    vec_tau_FIRM, thr_FIRM = model.prop.vec_tau_FIRM, model.prop.thr_FIRM
+    Pi_i = firms.Pi_i
+
+    corp_tax_pybl = zeros(typeFloat, length(Pi_i))
+
+    # Calculate corporate income tax for firm i
+    for i in eachindex(Pi_i)
+        corp_tax_pybl[i] = corporate_income_tax_payable(Pi_i[i], vec_tau_FIRM, thr_FIRM)
+    end
+
     sales = firms.P_i .* firms.Q_i
     labour_cost = -(1 + tau_SIF) * firms.w_i .* firms.N_i * P_bar_HH
     material_cost = -firms.DM_i .* firms.P_bar_i
     taxes_products = -firms.tau_Y_i .* firms.P_i .* firms.Y_i
     taxes_production = -firms.tau_K_i .* firms.P_i .* firms.Y_i
-    corporate_tax = -tau_FIRM .* pos.(firms.Pi_i)
-    dividend_payments = -theta_DIV .* (1 - tau_FIRM) .* pos.(firms.Pi_i)
+    # New corporate tax
+    corporate_tax = -corp_tax_pybl
+    # # Old corporate_tax
+    # corporate_tax = -tau_FIRM .* pos.(firms.Pi_i)
+    # New dividends 
+    dividend_payments = -theta_DIV .* (Pi_i .- corp_tax_pybl)
+    # # Old dividends
+    # dividend_payments = -theta_DIV .* (1 - tau_FIRM) .* pos.(firms.Pi_i)
     interest_payments = -r .* (firms.L_i .+ pos.(-firms.D_i))
     interest_received = r_bar .* pos.(firms.D_i)
     investment_cost = -firms.P_CF_i .* firms.I_i
