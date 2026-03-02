@@ -30,6 +30,9 @@ end
 # personal income tax functions
 include("utils/pit_functions.jl")
 
+# corporate income tax functions
+include("utils/cit_functions.jl")
+
 # definition of agents
 include("model_init/agents.jl")
 

@@ -16,17 +16,23 @@ function households_income_act(model; expected = false)
     w_h, O_h, tau_SIW, tau_INC = w_act.w_h, w_act.O_h, model.prop.tau_SIW, model.prop.tau_INC
     theta_UB, sb_other, P_bar_HH = model.prop.theta_UB, model.gov.sb_other, model.agg.P_bar_HH
 
-    # new personal income tax parameters
-    vec_tau_PIT, vec_thr_lo_PIT, vec_thr_up_PIT, vec_addition_PIT = prop.vec_tau_PIT, prop.vec_thr_lo_PIT, prop.vec_thr_up_PIT, prop.vec_addition_PIT
+    # provincial personal income tax parameters
+    vec_tau_PIT, vec_thr_lo_PIT = prop.vec_tau_PIT, prop.vec_thr_lo_PIT
+
+    # federal personal income tax parameters
+    vec_tau_fed_PIT, vec_thr_lo_fed_PIT = prop.vec_tau_fed_PIT, prop.vec_thr_lo_fed_PIT
 
     pi_e = expected ? model.agg.pi_e : zero(typeFloat)
 
     Y_h = zeros(typeFloat, length(w_h))
     for h in eachindex(w_h)
         if O_h[h] != 0
-            # new Y_h with personal income tax functionality
+            # provincial personal income tax functionality
             inc_tax_pybl_h = income_tax_payable(w_h[h], vec_tau_PIT, vec_thr_lo_PIT, tau_SIW)
-            Y_h[h] = (w_h[h] * (1 - tau_SIW) - inc_tax_pybl_h + sb_other) * P_bar_HH * (1 + pi_e)
+            # federal personal income tax functionality
+            fed_inc_tax_pybl_h = income_tax_payable(w_h[h], vec_tau_fed_PIT, vec_thr_lo_fed_PIT, tau_SIW)
+            # new Y_h with both provincial and federal personal income tax functionality
+            Y_h[h] = (w_h[h] * (1 - tau_SIW) - inc_tax_pybl_h - fed_inc_tax_pybl_h + sb_other) * P_bar_HH * (1 + pi_e)
             # old Y_h:
             # Y_h[h] = (w_h[h] * (1 - tau_SIW - tau_INC * (1 - tau_SIW)) + sb_other) * P_bar_HH * (1 + pi_e)
         else
@@ -58,17 +64,42 @@ function set_households_income_inact!(model; expected = false)
 end
 
 function households_income_firms(model::AbstractModel; expected = false)
-    firms = model.firms
+    firms, prop = model.firms, model.prop
     tau_INC, tau_FIRM, theta_DIV = model.prop.tau_INC, model.prop.tau_FIRM, model.prop.theta_DIV
     sb_other, P_bar_HH = model.gov.sb_other, model.agg.P_bar_HH
+    # provincial personal income tax parameters
+    vec_tau_PIT, vec_thr_lo_PIT = prop.vec_tau_PIT, prop.vec_thr_lo_PIT
+    # federal personal income tax parameters
+    vec_tau_fed_PIT, vec_thr_lo_fed_PIT = prop.vec_tau_fed_PIT, prop.vec_thr_lo_fed_PIT
 
     Pi_i = expected ? firms.Pi_e_i : firms.Pi_i
     pi_e = expected ? model.agg.pi_e : zero(typeFloat)
 
     Y_h = zeros(typeFloat, length(Pi_i))
+    
+    inc_tax_pybl_firms = zeros(typeFloat, length(Pi_i))
+
+    # Calculate provincial income tax for each firm owner i
     for i in eachindex(Pi_i)
-        Y_h[i] = theta_DIV * (1 - tau_INC) * (1 - tau_FIRM) * max(0, Pi_i[i]) + sb_other * P_bar_HH * (1 + pi_e)
+        inc_tax_pybl_firms[i] = income_tax_payable_firms(theta_DIV, tau_FIRM, Pi_i[i], vec_tau_PIT, vec_thr_lo_PIT)
     end
+
+    fed_inc_tax_pybl_firms = zeros(typeFloat, length(Pi_i))
+
+    # Calculate federal income tax for each firm owner i
+    for i in eachindex(Pi_i)
+        fed_inc_tax_pybl_firms[i] = income_tax_payable_firms(theta_DIV, tau_FIRM, Pi_i[i], vec_tau_fed_PIT, vec_thr_lo_fed_PIT)
+    end
+
+    # Calculate net disposable income for each firm owner i
+    for i in eachindex(Pi_i)
+        Y_h[i] = theta_DIV * (1 - tau_FIRM) * max(0, Pi_i[i]) - inc_tax_pybl_firms[i] - fed_inc_tax_pybl_firms[i] + sb_other * P_bar_HH * (1 + pi_e)
+    end
+    
+    # # Old Y_h:
+    # for i in eachindex(Pi_i)
+    #     Y_h[i] = theta_DIV * (1 - tau_INC) * (1 - tau_FIRM) * max(0, Pi_i[i]) + sb_other * P_bar_HH * (1 + pi_e)
+    # end
     return Y_h
 end
 function set_households_income_firms!(model; expected = false)
@@ -76,15 +107,46 @@ function set_households_income_firms!(model; expected = false)
 end
 
 function households_income_bank(model; expected = false)
-    bank = model.bank
+    bank, prop = model.bank, model.prop
 
     tau_INC, tau_FIRM, theta_DIV = model.prop.tau_INC, model.prop.tau_FIRM, model.prop.theta_DIV
     sb_other, P_bar_HH = model.gov.sb_other, model.agg.P_bar_HH
 
+    # provincial income tax parameters
+    vec_tau_PIT, vec_thr_lo_PIT = prop.vec_tau_PIT, prop.vec_thr_lo_PIT
+
+    # federal income tax parameters
+    vec_tau_fed_PIT, vec_thr_lo_fed_PIT = prop.vec_tau_fed_PIT, prop.vec_thr_lo_fed_PIT
+
     Pi_k = expected ? bank.Pi_e_k : bank.Pi_k
     pi_e = expected ? model.agg.pi_e : zero(typeFloat)
 
-    Y_h = theta_DIV * (1 - tau_INC) * (1 - tau_FIRM) * max(0, Pi_k) + sb_other * P_bar_HH * (1 + pi_e)
+    Y_h = zeros(typeFloat, length(Pi_k))
+
+    inc_tax_pybl_bank = zeros(typeFloat, length(Pi_k))
+
+    # Calculate provincial personal income tax for bank owner k
+    for k in eachindex(Pi_k)
+        inc_tax_pybl_bank[k] = income_tax_payable_firms(theta_DIV, tau_FIRM, Pi_k[k], vec_tau_PIT, vec_thr_lo_PIT)
+    end
+
+    fed_inc_tax_pybl_bank = zeros(typeFloat, length(Pi_k))
+
+    # Calculate provincial personal income tax for bank owner k
+    for k in eachindex(Pi_k)
+        fed_inc_tax_pybl_bank[k] = income_tax_payable_firms(theta_DIV, tau_FIRM, Pi_k[k], vec_tau_fed_PIT, vec_thr_lo_fed_PIT)
+    end
+
+    # Calculate net disposable income for bank owner k
+    for k in eachindex(Pi_k)
+        Y_h[k] = theta_DIV * (1 - tau_FIRM) * max(0, Pi_k[k]) - inc_tax_pybl_bank[k] - fed_inc_tax_pybl_bank[k] + sb_other * P_bar_HH * (1 + pi_e)
+    end
+
+    # household income/budget/deposit functions below for bank owner assume a single bank
+    # TODO: modify those functions to allow for more than one bank (low priority)
+    Y_h = only(Y_h)
+    # # Old Y_h:
+    # Y_h = theta_DIV * (1 - tau_INC) * (1 - tau_FIRM) * max(0, Pi_k) + sb_other * P_bar_HH * (1 + pi_e)
     return Y_h
 end
 function set_households_income_bank!(model; expected = false)
