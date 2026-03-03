@@ -83,19 +83,19 @@ function households_income_firms(model::AbstractModel; expected = false)
 
     # Calculate provincial income tax for each firm owner i
     for i in eachindex(Pi_i)
-        inc_tax_pybl_firms[i] = income_tax_payable_firms(theta_DIV, tau_FIRM, Pi_i[i], vec_tau_PIT, vec_thr_lo_PIT)
+        inc_tax_pybl_firms[i] = income_tax_payable_firms(Pi_i[i], theta_DIV, vec_tau_FIRM, thr_FIRM, vec_tau_PIT, vec_thr_lo_PIT)
     end
 
     fed_inc_tax_pybl_firms = zeros(typeFloat, length(Pi_i))
 
     # Calculate federal income tax for each firm owner i
     for i in eachindex(Pi_i)
-        fed_inc_tax_pybl_firms[i] = income_tax_payable_firms(theta_DIV, tau_FIRM, Pi_i[i], vec_tau_fed_PIT, vec_thr_lo_fed_PIT)
+        fed_inc_tax_pybl_firms[i] = income_tax_payable_firms(Pi_i[i], theta_DIV, vec_tau_FIRM, thr_FIRM, vec_tau_fed_PIT, vec_thr_lo_fed_PIT)
     end
 
     for i in eachindex(Pi_i)
         corp_tax_pybl_i = corporate_income_tax_payable(Pi_i[i], vec_tau_FIRM, thr_FIRM)
-        Y_h[i] = theta_DIV * max(0, Pi_i[i]) - corp_tax_pybl_i - inc_tax_pybl_firms[i] - fed_inc_tax_pybl_firms[i] + sb_other * P_bar_HH * (1 + pi_e)
+        Y_h[i] = theta_DIV * (max(0, Pi_i[i]) - corp_tax_pybl_i) - inc_tax_pybl_firms[i] - fed_inc_tax_pybl_firms[i] + sb_other * P_bar_HH * (1 + pi_e)
     end
 
     # Previous iteration of new Y_h:
@@ -135,20 +135,20 @@ function households_income_bank(model; expected = false)
 
     # Calculate provincial personal income tax for bank owner k
     for k in eachindex(Pi_k)
-        inc_tax_pybl_bank[k] = income_tax_payable_firms(theta_DIV, tau_FIRM, Pi_k[k], vec_tau_PIT, vec_thr_lo_PIT)
+        inc_tax_pybl_bank[k] = income_tax_payable_firms(Pi_k[k], theta_DIV, vec_tau_FIRM, thr_FIRM, vec_tau_PIT, vec_thr_lo_PIT)
     end
 
     fed_inc_tax_pybl_bank = zeros(typeFloat, length(Pi_k))
 
     # Calculate provincial personal income tax for bank owner k
     for k in eachindex(Pi_k)
-        fed_inc_tax_pybl_bank[k] = income_tax_payable_firms(theta_DIV, tau_FIRM, Pi_k[k], vec_tau_fed_PIT, vec_thr_lo_fed_PIT)
+        fed_inc_tax_pybl_bank[k] = income_tax_payable_firms(Pi_k[k], theta_DIV, vec_tau_FIRM, thr_FIRM, vec_tau_fed_PIT, vec_thr_lo_fed_PIT)
     end
 
     # Calculate net disposable income for bank owner k
     for k in eachindex(Pi_k)
-        corp_tax_pybl_k = corporate_income_tax_payable(Pi_k, vec_tau_FIRM, thr_FIRM)
-        Y_h[k] = theta_DIV * max(0, Pi_k[k]) - corp_tax_pybl_k - inc_tax_pybl_bank[k] - fed_inc_tax_pybl_bank[k] + sb_other * P_bar_HH * (1 + pi_e)
+        corp_tax_pybl_k = corporate_income_tax_payable(Pi_k[k], vec_tau_FIRM, thr_FIRM)
+        Y_h[k] = theta_DIV * (max(0, Pi_k[k]) - corp_tax_pybl_k) - inc_tax_pybl_bank[k] - fed_inc_tax_pybl_bank[k] + sb_other * P_bar_HH * (1 + pi_e)
     end
     
     # Previous iteration of Y_h

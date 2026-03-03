@@ -34,21 +34,29 @@ function income_tax_payable(inc, vec_tau, vec_thr_lo, tau_SIW)
 end
 
 """
-    income_tax_payable_firms (inc, vec_tau, vec_thr_lo, tau_SIW)
+    income_tax_payable_firms(profit, theta_DIV, vec_tau_FIRM, thr_FIRM, vec_tau_PIT, vec_thr_lo_PIT)
 
-Computes a person's income tax payable for an active household given a vector of tax rates, a vector of (lower) income thresholds, and an effective employee social contribution rate.
+Computes a firm owner's income tax payable given:
+`profit`: annual profit
+`theta_DIV`: effective dividend rate
+`vec_tau_FIRM`: a lower and a higher corporate tax rate
+`thr_FIRM`: threshold determining whether higher corporate tax rate comes into effective
+`vec_tau_PIT`: a vector of personal income tax rates
+`vec_thr_lo_PIT`: a vector of (lower) personal income thresholds
 
 # Returns
-- `inc_tax_pybl`: Personal income tax payable (\$)
+- `inc_tax_pybl_firms`: Personal income tax payable on dividends of firm owner (\$)
 """
 
 ## Personal income tax (PIT) functions
-function income_tax_payable_firms(theta_DIV, tau_FIRM, profit, vec_tau, vec_thr_lo)
-    
-    dividends = theta_DIV * (1 - tau_FIRM) * max(0, profit)
-
-    inc_tax_pybl_firms = income_tax_payable(dividends, vec_tau, vec_thr_lo, 0)
-
+function income_tax_payable_firms(profit, theta_DIV, vec_tau_FIRM, thr_FIRM, vec_tau_PIT, vec_thr_lo_PIT)
+    if profit <= 0
+        inc_tax_pybl_firms = 0
+    else
+        corp_tax_pybl = corporate_income_tax_payable(profit, vec_tau_FIRM, thr_FIRM)
+        dividends = theta_DIV * (profit - corp_tax_pybl)
+        inc_tax_pybl_firms = income_tax_payable(dividends, vec_tau_PIT, vec_thr_lo_PIT, 0)
+    end
     return inc_tax_pybl_firms
 end
 
