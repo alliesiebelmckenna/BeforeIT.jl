@@ -50,6 +50,7 @@ function gov_revenues(model::AbstractModel)
 
     # corporate income tax parameters
     vec_tau_FIRM, thr_FIRM = model.prop.vec_tau_FIRM, model.prop.thr_FIRM
+    Pi_i, Pi_k = firms.Pi_i, bank.Pi_k
     # compute total wages, consumption and investment
     tot_wages_emp = sum(w_act.w_h[w_act.O_h .!= 0])
     tot_C_h = sum(w_act.C_h) + sum(w_inact.C_h) + sum(firms.C_h) + bank.C_h
@@ -72,6 +73,33 @@ function gov_revenues(model::AbstractModel)
         end
     end
 
+    # New labour_income (personal income tax on workers)
+    labour_income = sum(vec_inc_tax_pybl)
+    # Old personal income tax specification:
+    old_labour_income = tau_INC * (1 - tau_SIW) * P_bar_HH * tot_wages_emp
+    value_added = tau_VAT * tot_C_h
+    
+    # New capital_income (personal income tax on firm and bank owners)
+    inc_tax_pybl_firms = zeros(typeFloat, length(Pi_i))
+
+    # Calculate provincial income tax for each firm owner i
+    for i in eachindex(Pi_i)
+        inc_tax_pybl_firms[i] = income_tax_payable_firms(Pi_i[i], theta_DIV, vec_tau_FIRM, thr_FIRM, vec_tau_PIT, vec_thr_lo_PIT)
+    end
+
+    inc_tax_pybl_bank = zeros(typeFloat, length(Pi_k))
+
+    # Calculate provincial income tax for each bank owner k
+    for k in eachindex(Pi_k)
+        inc_tax_pybl_bank[k] = income_tax_payable_firms(Pi_k[k], theta_DIV, vec_tau_FIRM, thr_FIRM, vec_tau_PIT, vec_thr_lo_PIT)
+    end
+
+    capital_income = sum(inc_tax_pybl_firms) + sum(inc_tax_pybl_bank)
+
+    # # Old capital_income
+    # capital_income = tau_INC * (1 - tau_FIRM) * theta_DIV * (sum(pos.(firms.Pi_i)) + pos(bank.Pi_k))
+
+    # New corporate_income (corporate income tax)
     corp_tax_pybl = zeros(length(firms))
 
     for i in 1:length(firms)
@@ -80,11 +108,6 @@ function gov_revenues(model::AbstractModel)
 
     bank_corp_tax_pybl = corporate_income_tax_payable(bank.Pi_k, vec_tau_FIRM, thr_FIRM)
 
-    labour_income = sum(vec_inc_tax_pybl)
-    # Old personal income tax specification:
-    old_labour_income = tau_INC * (1 - tau_SIW) * P_bar_HH * tot_wages_emp
-    value_added = tau_VAT * tot_C_h
-    capital_income = tau_INC * (1 - tau_FIRM) * theta_DIV * (sum(pos.(firms.Pi_i)) + pos(bank.Pi_k))
     corporate_income = sum(corp_tax_pybl) + bank_corp_tax_pybl
     # # Old corporate_income
     # corporate_income = tau_FIRM * (sum(pos.(firms.Pi_i)) + pos(bank.Pi_k))
