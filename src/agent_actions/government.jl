@@ -48,6 +48,8 @@ function gov_revenues(model::AbstractModel)
     vec_tau_PIT, vec_thr_lo_PIT, vec_thr_up_PIT, vec_addition_PIT = prop.vec_tau_PIT, prop.vec_thr_lo_PIT, prop.vec_thr_up_PIT, prop.vec_addition_PIT    
     tau_FIRM, tau_EXPORT, theta_DIV = prop.tau_FIRM, prop.tau_EXPORT, prop.theta_DIV
 
+    # corporate income tax parameters
+    vec_tau_FIRM, thr_FIRM = model.prop.vec_tau_FIRM, model.prop.thr_FIRM
     # compute total wages, consumption and investment
     tot_wages_emp = sum(w_act.w_h[w_act.O_h .!= 0])
     tot_C_h = sum(w_act.C_h) + sum(w_inact.C_h) + sum(firms.C_h) + bank.C_h
@@ -70,12 +72,22 @@ function gov_revenues(model::AbstractModel)
         end
     end
 
+    corp_tax_pybl = zeros(length(firms))
+
+    for i in 1:length(firms)
+        corp_tax_pybl[i] = corporate_income_tax_payable(firms.Pi_i[i], vec_tau_FIRM, thr_FIRM)
+    end
+
+    bank_corp_tax_pybl = corporate_income_tax_payable(bank.Pi_k, vec_tau_FIRM, thr_FIRM)
+
     labour_income = sum(vec_inc_tax_pybl)
     # Old personal income tax specification:
     old_labour_income = tau_INC * (1 - tau_SIW) * P_bar_HH * tot_wages_emp
     value_added = tau_VAT * tot_C_h
     capital_income = tau_INC * (1 - tau_FIRM) * theta_DIV * (sum(pos.(firms.Pi_i)) + pos(bank.Pi_k))
-    corporate_income = tau_FIRM * (sum(pos.(firms.Pi_i)) + pos(bank.Pi_k))
+    corporate_income = sum(corp_tax_pybl) + bank_corp_tax_pybl
+    # # Old corporate_income
+    # corporate_income = tau_FIRM * (sum(pos.(firms.Pi_i)) + pos(bank.Pi_k))
     capital_formation = tau_CF * tot_I_h
     products = sum(firms.tau_Y_i .* firms.P_i .* firms.Y_i)
     production = sum(firms.tau_K_i .* firms.P_i .* firms.Y_i)
