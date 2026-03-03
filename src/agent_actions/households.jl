@@ -71,6 +71,8 @@ function households_income_firms(model::AbstractModel; expected = false)
     vec_tau_PIT, vec_thr_lo_PIT = prop.vec_tau_PIT, prop.vec_thr_lo_PIT
     # federal personal income tax parameters
     vec_tau_fed_PIT, vec_thr_lo_fed_PIT = prop.vec_tau_fed_PIT, prop.vec_thr_lo_fed_PIT
+    # corporate income tax parameters
+    vec_tau_FIRM, thr_FIRM = prop.vec_tau_FIRM, prop.thr_FIRM
 
     Pi_i = expected ? firms.Pi_e_i : firms.Pi_i
     pi_e = expected ? model.agg.pi_e : zero(typeFloat)
@@ -91,10 +93,16 @@ function households_income_firms(model::AbstractModel; expected = false)
         fed_inc_tax_pybl_firms[i] = income_tax_payable_firms(theta_DIV, tau_FIRM, Pi_i[i], vec_tau_fed_PIT, vec_thr_lo_fed_PIT)
     end
 
-    # Calculate net disposable income for each firm owner i
     for i in eachindex(Pi_i)
-        Y_h[i] = theta_DIV * (1 - tau_FIRM) * max(0, Pi_i[i]) - inc_tax_pybl_firms[i] - fed_inc_tax_pybl_firms[i] + sb_other * P_bar_HH * (1 + pi_e)
+        corp_tax_pybl_i = corporate_income_tax_payable(Pi_i[i], vec_tau_FIRM, thr_FIRM)
+        Y_h[i] = theta_DIV * max(0, Pi_i[i]) - corp_tax_pybl_i - inc_tax_pybl_firms[i] - fed_inc_tax_pybl_firms[i] + sb_other * P_bar_HH * (1 + pi_e)
     end
+
+    # Previous iteration of new Y_h:
+    # # Calculate net disposable income for each firm owner i
+    # for i in eachindex(Pi_i)
+    #     Y_h[i] = theta_DIV * (1 - tau_FIRM) * max(0, Pi_i[i]) - inc_tax_pybl_firms[i] - fed_inc_tax_pybl_firms[i] + sb_other * P_bar_HH * (1 + pi_e)
+    # end
     
     # # Old Y_h:
     # for i in eachindex(Pi_i)
@@ -139,8 +147,15 @@ function households_income_bank(model; expected = false)
 
     # Calculate net disposable income for bank owner k
     for k in eachindex(Pi_k)
-        Y_h[k] = theta_DIV * (1 - tau_FIRM) * max(0, Pi_k[k]) - inc_tax_pybl_bank[k] - fed_inc_tax_pybl_bank[k] + sb_other * P_bar_HH * (1 + pi_e)
+        corp_tax_pybl_k = corporate_income_tax_payable(Pi_k, vec_tau_FIRM, thr_FIRM)
+        Y_h[k] = theta_DIV * max(0, Pi_k[k]) - corp_tax_pybl_k - inc_tax_pybl_bank[k] - fed_inc_tax_pybl_bank[k] + sb_other * P_bar_HH * (1 + pi_e)
     end
+    
+    # Previous iteration of Y_h
+    # # Calculate net disposable income for bank owner k
+    # for k in eachindex(Pi_k)
+    #     Y_h[k] = theta_DIV * (1 - tau_FIRM) * max(0, Pi_k[k]) - inc_tax_pybl_bank[k] - fed_inc_tax_pybl_bank[k] + sb_other * P_bar_HH * (1 + pi_e)
+    # end
 
     # household income/budget/deposit functions below for bank owner assume a single bank
     # TODO: modify those functions to allow for more than one bank (low priority)
