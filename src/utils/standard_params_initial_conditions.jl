@@ -6,7 +6,7 @@ struct InitialState
 end
 
 # Load user-defined parameters
-paras = YAML.load_file("bcfin/core-test/config.yaml")
+paras = YAML.load_file("configs/placeholder.yaml")
 
 dir = joinpath(splitpath(dirname(pathof(@__MODULE__)))[1:(end - 1)])
 
